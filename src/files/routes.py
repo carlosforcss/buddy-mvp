@@ -1,42 +1,38 @@
 from fastapi import APIRouter, Depends, Body, UploadFile
 from utils.s3 import S3Client
+from utils.logger import Logger
 from src.files.services import FileService
 from src.files.schemas.files_schemas import FileSchema
+from src.files.repositories import FilesRepository
+from fastapi.responses import StreamingResponse
+from io import BytesIO
 
 
 router = APIRouter(prefix="/files", tags=["files"])
+logger = Logger(__name__)
 
-
-@router.post("/upload/contet")
-async def upload_file(payload: FileSchema = Body(...)):
-    """
-    Upload a file to the server.
-    """
-    service = FileService(S3Client(), None)
-    private_file_url = await service.upload_file(
-        payload.content,
-        payload.file_type,
-    )
-    return {
-        "file_url": private_file_url
-    }
     
-@router.post("/upload/file")
+@router.post("/upload")
 async def upload_file_object(file: UploadFile):
     """
     Upload a file to the server.
     """
-    service = FileService(S3Client(), None)
+    service = FileService(S3Client(), FilesRepository(logger), logger)
     _, file_type = file.filename.split(".")
-    private_file_url = await service.upload_file(file.file, file_type)
-    return {
-        "file_url": private_file_url
-    }
+    new_file = await service.upload_file(file.file, file_type)
+    return FileSchema(
+        id=new_file.id,
+        name=new_file.name
+    )
 
 
-@router.get("/download")
-async def get_filfe_content():
-    """
-    Get the content of a file.
-    """
-    pass
+@router.get("/download/")
+async def download_file(file_id: int):
+    service = FileService(S3Client(), FilesRepository(logger), logger)
+    file_content, file_name = await service.get_file_content(file_id)
+    buffer = BytesIO(file_content)
+    return StreamingResponse(
+        buffer,
+        media_type="application/octet-stream",
+        headers={"Content-Disposition": f"attachment; filename={file_name}"}
+    )
