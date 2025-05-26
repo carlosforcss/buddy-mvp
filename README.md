@@ -14,3 +14,5 @@ A one-sentence summary of what this project does and why it exists.
    ```bash
    git clone https://github.com/your-username/your-repo.git
    cd your-repo
+
+Docs for the realtime API: https://platform.openai.com/docs/guides/realtime

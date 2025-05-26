@@ -8,7 +8,7 @@ import websockets
 import asyncio
 
 
-class SessionEventsService:
+class RealtimeEventsService:
 
     def get_first_session_update_event(modalities: List[str]):
         print("sending first session update event")
@@ -39,7 +39,7 @@ class SessionEventsService:
                 "tools": [],
                 "tool_choice": "auto",
                 "temperature": 0.7,
-                "max_output_tokens": 200,
+                "max_output_tokens": 1000,
             },
         }
 
@@ -55,6 +55,22 @@ class SessionEventsService:
                     {
                         "type": "input_text",
                         "text": text,
+                    }
+                ],
+            },
+        }
+        
+    def get_conversation_audio_item_create_event(audio_base64: str):
+        print("sending conversation audio item create event")
+        return {
+            "type": "conversation.item.create",
+            "item": {
+                "type": "message",
+                "role": "user",
+                "content": [
+                    {
+                        "type": "input_audio",
+                        "audio": audio_base64,
                     }
                 ],
             },
@@ -135,16 +151,13 @@ class RealtimeSessionService:
                 print("audio received")
                 # Convert audio bytes to base64
                 audio_base64 = base64.b64encode(data).decode("utf-8")
-                # Send audio buffer append event
-                append_event = RealtimeEventsService.get_audio_buffer_append_event(audio_base64)
-                await external_websocket.send(json.dumps(append_event))
-                # Send commit event
-                commit_event = RealtimeEventsService.get_audio_buffer_commit_event()
-                await external_websocket.send(json.dumps(commit_event))
+                # Create a new audio message
+                new_message = RealtimeEventsService.get_conversation_audio_item_create_event(audio_base64)
+                await external_websocket.send(json.dumps(new_message))
                 print("commit event sent")
             except Exception as e:
-                logger.error(
-                    f"Error in client_to_external audio handling {session_id}: {e}"
+                print(
+                    f"Error in client_to_external audio handling {self.session_id}: {e}"
                 )
                 break
     
@@ -153,11 +166,12 @@ class RealtimeSessionService:
             try:
                 data = await external_websocket.recv()
                 event = json.loads(data)
-                await internal_websocket.send_text(
-                    json.dumps({"log": f"{event}"}, indent=4)
-                )
+                if not event.get("type") == "response.audio.delta":    
+                    await internal_websocket.send_text(
+                        json.dumps({"log": f"{event}"}, indent=4)
+                    )
                 if event.get("type") == "conversation.item.created":
-                    response_create_event = self._get_response_create_event(
+                    response_create_event = RealtimeEventsService.get_response_create_event(
                         ["audio", "text"]
                     )
                     await external_websocket.send(json.dumps(response_create_event))
@@ -166,8 +180,8 @@ class RealtimeSessionService:
                     audio_data = base64.b64decode(event.get("delta"))
                     await internal_websocket.send_bytes(audio_data)
             except Exception as e:
-                logger.error(
-                    f"Error in external_to_client audio handling {session_id}: {e}"
+                print(
+                    f"Error in external_to_client audio handling {self.session_id}: {e}"
                 )
                 break
     
