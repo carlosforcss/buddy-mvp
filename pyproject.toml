@@ -10,4 +10,5 @@ dependencies = [
     "openai>=1.79.0",
     "psycopg>=3.2.9",
     "tortoise-orm>=0.25.0",
+    "websockets==10.1",
 ]
