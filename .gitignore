@@ -60,6 +60,7 @@ dmypy.json
 # Logs and databases
 *.log
 *.sqlite3
+db.sqlite3*
 
 # IDEs and editors
 .idea/

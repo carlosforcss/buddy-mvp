@@ -53,13 +53,17 @@ class OpenAIClient(AIClient):
         )
         return response
     
-    def send_message(self, messages: list[dict], model: str = "gpt-4o") -> str:
+    def send_message(self, message: str, model: str = "gpt-4o-mini") -> str:
         """
         Sends a list of messages to ChatGPT and returns the response text.
         Args:
             messages: A list of {"role": "user" | "assistant" | "system", "content": str}
             model: The OpenAI chat model to use (default: gpt-4o)
         """
+        messages = [
+            {"role": "system", "content": "You are a helpful assistant, be short, friendly and concise, and use only plain text withoht emogies. Prepare the text to be formated to audio"},
+            {"role": "user", "content": message}
+        ]
         response = self.openai.chat.completions.create(
             model=model,
             messages=messages,

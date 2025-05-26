@@ -3,6 +3,7 @@ from tortoise import Tortoise, run_async
 from tortoise.contrib.fastapi import register_tortoise
 from src.files.routes import router as file_router
 from src.voice.routes import router as audio_router
+from src.conversations.routes import router as conversations_router
 from config.db import initialize_db
 
 
@@ -15,6 +16,7 @@ app = FastAPI(
 # 3. “Include” the router in the app
 app.include_router(file_router)
 app.include_router(audio_router)
+app.include_router(conversations_router)
 
 register_tortoise(
     app,
