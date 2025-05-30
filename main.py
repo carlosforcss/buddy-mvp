@@ -20,7 +20,12 @@ app.include_router(conversations_router)
 register_tortoise(
     app,
     db_url="sqlite://db.sqlite3",
-    modules={"models": ["src.files.models.files"]},
+    modules={
+        "models": [
+            "src.files.models",
+            "src.conversations.models",
+        ]
+    },
     generate_schemas=True,
     add_exception_handlers=True,
 )

@@ -9,13 +9,12 @@ from utils.ai import OpenAIClient, GeminiClient
 from utils.logger import Logger
 from config import settings
 from src.conversations.services import ConversationsService
-from src.conversations.services import RealtimeSessionService, ImageService
+from src.conversations.services import RealtimeSessionService, ImageTranscriptionService
+from src.conversations.repositories import ImageTranscriptionRepository
 from src.files.services import FileService
-
+from src.files.repositories import FilesRepository
 
 router = APIRouter(prefix="/conversations", tags=["conversations"])
-
-
 logger = Logger(__name__)
 
 
@@ -37,19 +36,17 @@ async def audio_websocket(websocket: WebSocket):
 
 
 @router.post("/image")
-def upload_image(image: UploadFile = File(...)):
+async def upload_image(image: UploadFile = File(...)):
     logger = Logger(__name__)
-    gemini_client = GeminiClient(settings.GEMINI_API_KEY)
-    files_service = FilesService(
-        S3Client(
-            settings.AWS_ACCESS_KEY_ID,
-            settings.AWS_SECRET_ACCESS_KEY,
-            settings.AWS_REGION,
-            settings.AWS_BUCKET_NAME,
-        ),
-        FilesRepository(),
+    gemini_client = GeminiClient(settings.GOOGLE_API_KEY)
+    files_service = FileService(
+        S3Client(),
+        FilesRepository(logger),
         logger,
     )
-    service = ImageService(gemini_client, files_service, logger)
-    image_description = service.upload_image(image)
-    return {"image_description": image_description}
+    image_transcriptino_repository = ImageTranscriptionRepository()
+    service = ImageTranscriptionService(
+        gemini_client, files_service, image_transcriptino_repository, logger
+    )
+    image_description = await service.transcribe_iamge(image)
+    return {"image_description": image_description.transcription}
