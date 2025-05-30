@@ -2,7 +2,6 @@ from src.files.models import File
 
 
 class FilesRepository:
-    
     def __init__(self, logger: "utils.logger.Logger"):
         self.logger = logger
 
@@ -10,11 +9,10 @@ class FilesRepository:
         """
         Create a new file record in the database.
         """
-        self.logger.info(f"Creating file record in the database: {file_name} in bucket {bucket_name}")
-        new_file = await File.create(
-            name=file_name,
-            bucket=bucket_name
+        self.logger.info(
+            f"Creating file record in the database: {file_name} in bucket {bucket_name}"
         )
+        new_file = await File.create(name=file_name, bucket=bucket_name)
         return new_file
 
     async def get_by_id(self, file_id: int):

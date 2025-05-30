@@ -11,4 +11,3 @@ class ImageService:
 
     def upload_image(self, image):
         pass
-    

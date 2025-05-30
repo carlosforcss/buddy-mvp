@@ -16,11 +16,7 @@ async def get_text_from_audio(audio_file: UploadFile):
     """
     Getting text from audio an file.
     """
-    service = TranscriptionService(
-        OpenAIClient(settings.OPENAI_API_KEY),
-        None, 
-        logger
-    )
+    service = TranscriptionService(OpenAIClient(settings.OPENAI_API_KEY), None, logger)
     file_content = BytesIO(await audio_file.read())
     text = service.get_text_from_audio(file_content)
     return {"text": text}
@@ -31,15 +27,10 @@ async def get_audio_from_text(text: str):
     """
     Getting audio from text.
     """
-    service = TranscriptionService(
-        OpenAIClient(settings.OPENAI_API_KEY),
-        None, 
-        logger
-    )
+    service = TranscriptionService(OpenAIClient(settings.OPENAI_API_KEY), None, logger)
     audio = service.get_audio_from_text(text)
     return StreamingResponse(
         audio,
         media_type="audio/mpeg",
-        headers={"Content-Disposition": "attachment; filename=audio.mp3"}
+        headers={"Content-Disposition": "attachment; filename=audio.mp3"},
     )
-    

@@ -11,7 +11,7 @@ from io import BytesIO
 router = APIRouter(prefix="/files", tags=["files"])
 logger = Logger(__name__)
 
-    
+
 @router.post("/upload")
 async def upload_file_object(file: UploadFile):
     """
@@ -20,10 +20,7 @@ async def upload_file_object(file: UploadFile):
     service = FileService(S3Client(), FilesRepository(logger), logger)
     _, file_type = file.filename.split(".")
     new_file = await service.upload_file(file.file, file_type)
-    return FileSchema(
-        id=new_file.id,
-        name=new_file.name
-    )
+    return FileSchema(id=new_file.id, name=new_file.name)
 
 
 @router.get("/download/")
@@ -34,5 +31,5 @@ async def download_file(file_id: int):
     return StreamingResponse(
         buffer,
         media_type="application/octet-stream",
-        headers={"Content-Disposition": f"attachment; filename={file_name}"}
+        headers={"Content-Disposition": f"attachment; filename={file_name}"},
     )

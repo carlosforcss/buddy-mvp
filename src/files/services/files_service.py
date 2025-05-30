@@ -8,18 +8,20 @@ class FileService:
     """
     Upload a service to S3 and create a presigned URL for it.
     """
-    
+
     def __init__(
-        self, 
-        s3_client: S3Client, 
+        self,
+        s3_client: S3Client,
         files_repository: FilesRepository,
-        logger: "utils.logger.Logger"
+        logger: "utils.logger.Logger",
     ):
         self.s3_client = s3_client
         self.files_repository = files_repository
         self.logger = logger
-         
-    async def upload_file(self, file_content, file_type, file_name=None, bucket_name=None):
+
+    async def upload_file(
+        self, file_content, file_type, file_name=None, bucket_name=None
+    ):
         """
         Upload a file to S3 and create a presigned URL for it.
         """
@@ -28,7 +30,7 @@ class FileService:
             bucket_name = settings.DEFAULT_BUCKET_NAME
         if not file_name:
             file_name = f"{uuid4()}.{file_type}"
-        
+
         # Upload the file to S3
         self.s3_client.upload_file(file_content, file_name, bucket_name)
         new_file = await self.files_repository.create(
@@ -45,4 +47,3 @@ class FileService:
         self.logger.info(f"Getting file content from S3: {file_id}")
         file = await self.files_repository.get_by_id(file_id)
         return self.s3_client.get_file_content(file.name, file.bucket), file.name
-    

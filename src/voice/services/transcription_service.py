@@ -7,7 +7,7 @@ class TranscriptionService:
         self.transcription_repository = transcription_repository
         self.logger = logger
         self.ai_client = ai_client
-        
+
     def get_audio_from_text(self, text: str):
         """
         Getting audio from text.
@@ -15,7 +15,7 @@ class TranscriptionService:
         self.logger.info(f"Getting audio from text: {text}")
         audio = self.ai_client.text_to_audio(text)
         return audio
-    
+
     def get_text_from_audio(self, audio_file: BytesIO):
         """
         Getting text from audio file.

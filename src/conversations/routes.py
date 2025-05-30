@@ -9,10 +9,7 @@ from utils.ai import OpenAIClient, GeminiClient
 from utils.logger import Logger
 from config import settings
 from src.conversations.services import ConversationsService
-from src.conversations.services import (
-    RealtimeSessionService,
-    ImageService
-)
+from src.conversations.services import RealtimeSessionService, ImageService
 from src.files.services import FileService
 
 
@@ -26,15 +23,9 @@ logger = Logger(__name__)
 async def get_conversations(message: str):
     gemini_service = GeminiClient(settings.GOOGLE_API_KEY)
     openai_service = OpenAIClient(settings.OPENAI_API_KEY)
-    service = ConversationsService(
-        gemini_service,
-        None,
-        logger
-    )
+    service = ConversationsService(gemini_service, None, logger)
     answer = await service.send_simple_message(message)
-    return {
-        "answer": answer
-    }
+    return {"answer": answer}
 
 
 @router.websocket("/realtime")
@@ -43,7 +34,7 @@ async def audio_websocket(websocket: WebSocket):
     session_id = str(uuid.uuid4())[:8]
     service = RealtimeSessionService()
     await service.connect(websocket)
-    
+
 
 @router.post("/image")
 def upload_image(image: UploadFile = File(...)):
@@ -54,13 +45,11 @@ def upload_image(image: UploadFile = File(...)):
             settings.AWS_ACCESS_KEY_ID,
             settings.AWS_SECRET_ACCESS_KEY,
             settings.AWS_REGION,
-            settings.AWS_BUCKET_NAME
+            settings.AWS_BUCKET_NAME,
         ),
         FilesRepository(),
-        logger
+        logger,
     )
     service = ImageService(gemini_client, files_service, logger)
     image_description = service.upload_image(image)
-    return {
-        "image_description": image_description
-    }
+    return {"image_description": image_description}

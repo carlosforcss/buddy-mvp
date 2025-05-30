@@ -1,1 +1,1 @@
-from.transcription_service import TranscriptionService
+from .transcription_service import TranscriptionService
