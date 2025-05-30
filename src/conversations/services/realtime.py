@@ -21,7 +21,7 @@ class RealtimeEventsService:
                 "input_audio_format": "pcm16",
                 "input_audio_transcription": {
                     "model": "gpt-4o-transcribe",
-                    "prompt": "Trnascribe this audio in Spanish",
+                    "prompt": "Transcribe this audio in Spanish",
                     "language": "es",
                 },
             },

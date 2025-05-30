@@ -1,6 +1,11 @@
 from abc import ABC
 from io import BytesIO
+import base64
+import requests
 import openai
+from google.generativeai import configure, GenerativeModel
+from google.api_core.exceptions import GoogleAPIError
+
 
 
 class AIClient(ABC):
@@ -69,3 +74,65 @@ class OpenAIClient(AIClient):
             messages=messages,
         )
         return response.choices[0].message.content
+
+
+class GeminiClient(AIClient):
+    
+    def __init__(self, api_key: str):
+        configure(api_key=api_key)
+        self.model = GenerativeModel("gemini-1.5-pro-002")
+    
+    def text_to_audio(self, text: str, voice: str = "en-US-Wavenet-D") -> BytesIO:
+        """
+        Converts input text to speech using Google Cloud Text-to-Speech API.
+        NOTE: Gemini itself doesn't generate audio. You'd need to call TTS separately.
+        """
+        # Example using Google Cloud TTS REST API (not Gemini)
+        from google.cloud import texttospeech
+
+        client = texttospeech.TextToSpeechClient()
+        synthesis_input = texttospeech.SynthesisInput(text=text)
+        voice_params = texttospeech.VoiceSelectionParams(
+            language_code="en-US", name=voice
+        )
+        audio_config = texttospeech.AudioConfig(audio_encoding=texttospeech.AudioEncoding.MP3)
+
+        response = client.synthesize_speech(
+            input=synthesis_input,
+            voice=voice_params,
+            audio_config=audio_config
+        )
+
+        return BytesIO(response.audio_content)
+
+    def audio_to_text(self, audio_file: BytesIO) -> str:
+        """
+        Converts input audio to text using Google Cloud Speech-to-Text.
+        Gemini itself doesn’t transcribe audio.
+        """
+        from google.cloud import speech
+
+        client = speech.SpeechClient()
+        audio_file.seek(0)
+        content = audio_file.read()
+        audio = speech.RecognitionAudio(content=content)
+
+        config = speech.RecognitionConfig(
+            encoding=speech.RecognitionConfig.AudioEncoding.MP3,
+            language_code="en-US"
+        )
+
+        response = client.recognize(config=config, audio=audio)
+        return " ".join(result.alternatives[0].transcript for result in response.results)
+
+    def send_message(self, message: str, model: str = "gemini-pro") -> str:
+        """
+        Sends a prompt to Gemini and returns the response text.
+        """
+        try:
+            prompt = "You are a helpful assistant. Be short, friendly, and concise. Use only plain text."
+            full_prompt = f"{prompt}\n\nUser: {message}"
+            response = self.model.generate_content(full_prompt)
+            return response.text.strip()
+        except GoogleAPIError as e:
+            return f"Error from Gemini: {str(e)}"

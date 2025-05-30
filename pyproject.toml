@@ -7,6 +7,9 @@ requires-python = ">=3.13"
 dependencies = [
     "boto3>=1.38.18",
     "fastapi[standard]>=0.115.12",
+    "google-cloud-speech>=2.32.0",
+    "google-cloud-texttospeech>=2.27.0",
+    "google-generativeai>=0.8.5",
     "openai>=1.79.0",
     "psycopg>=3.2.9",
     "tortoise-orm>=0.25.0",
