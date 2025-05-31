@@ -38,7 +38,7 @@ class RealtimeEventsService:
                 "instructions": "You are assisting a low-vision or blind user. Always communicate in Spanish. Keep responses clear, friendly, and concise. You have a 1000-token limit - for longer responses, pause and ask in Spanish if the user wants to continue.",
                 "tools": [],
                 "tool_choice": "auto",
-                "temperature": 0.7,
+                "temperature": 1,
                 "max_output_tokens": 1000,
             },
         }
@@ -115,6 +115,33 @@ class RealtimeSessionService:
             "prompt": "Transcribe this audio in Spanish, focusing on clarity and accuracy",
             "language": "es",
         }
+        
+    def get_tools(self):
+        return [
+            {
+                "name": "get_last_image_description",
+                "type": "function",
+                "description": "Use this tool whenever the user implies any need to visually interpret, read, identify, analyze, describe, or find something in an image. This includes phrases like 'What is this?', 'Can you read this?', 'Describe the image', 'What do you see?', 'Is there any text here?', 'Look at this and tell me…', or similar. If the user implies a visual task, always call this tool without guessing or answering directly. Use it to describe the most recently uploaded image.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {}
+                }
+            },
+            {
+                "name": "get_chihuahua_weather",
+                "type": "function",
+                "description": "Use this tool whenever the user asks for the weather in Chihuahua, Mexico. This includes phrases like 'What is the weather in Chihuahua?' or similar. If the user implies a weather task, always call this tool without guessing or answering directly. Use it to get the weather in Chihuahua, Mexico.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "location": {
+                            "type": "string",
+                            "description": "The location to get the weather for"
+                        }
+                    }
+                }
+            },
+        ]
 
     def _get_first_session_update_event(self):
         return {
@@ -124,6 +151,9 @@ class RealtimeSessionService:
                 "voice": self.voice,
                 "instructions": self.instructions,
                 "input_audio_format": self.input_audio_format,
+                "tools": self.get_tools(),
+                "tool_choice": "auto",
+                "temperature": 1,
             },
         }
 
@@ -147,6 +177,7 @@ class RealtimeSessionService:
                 logger.info("audio received")
                 # Convert audio bytes to base64
                 audio_base64 = base64.b64encode(data).decode("utf-8")
+                print(audio_base64[0:50])
                 # Create a new audio message
                 new_message = (
                     RealtimeEventsService.get_conversation_audio_item_create_event(
@@ -170,7 +201,7 @@ class RealtimeSessionService:
                     await internal_websocket.send_text(
                         json.dumps({"log": f"{event}"}, indent=4)
                     )
-                if event.get("type") == "conversation.item.created":
+                if event.get("type") == "conversation.item.created" and event.get("item").get("role") == "user":
                     response_create_event = (
                         RealtimeEventsService.get_response_create_event(
                             ["audio", "text"]
@@ -191,7 +222,7 @@ class RealtimeSessionService:
             extra_headers=self._get_connection_headers(),
         ) as external_ws:
             logger.info(f"connected to external ws {self.session_id}")
-            external_ws.send(json.dumps(self._get_first_session_update_event()))
+            await external_ws.send(json.dumps(self._get_first_session_update_event()))
             await asyncio.gather(
                 self._openai_websocket_listener(internal_websocket, external_ws),
                 self._buddy_websocket_listener(internal_websocket, external_ws),

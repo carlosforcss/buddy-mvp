@@ -8,15 +8,31 @@ from utils.s3 import S3Client
 from utils.ai import OpenAIClient, GeminiClient
 from utils.logger import Logger
 from config import settings
-from src.conversations.services import ConversationsService
-from src.conversations.services import RealtimeSessionService, ImageTranscriptionService
-from src.conversations.repositories import ImageTranscriptionRepository
+from src.conversations.services import (
+    ConversationsService,
+    RealtimeSessionService,
+    ImageTranscriptionService,
+    SessionService,
+)
+from src.conversations.repositories import ImageTranscriptionRepository, SessionRepository
 from src.files.services import FileService
 from src.files.repositories import FilesRepository
 from src.conversations.schemas.image_transcription import ImageTranscriptionSchema
+from src.conversations.schemas.session import Session as SessionSchema
 
 router = APIRouter(prefix="/conversations", tags=["conversations"])
 logger = Logger(__name__)
+
+
+@router.post("/sessions", response_model=SessionSchema)
+async def create_session():
+    """
+    Create a new conversation session
+    """
+    session_repository = SessionRepository()
+    service = SessionService(session_repository, logger)
+    session = await service.create_session()
+    return SessionSchema.model_validate(session)
 
 
 @router.post("/message")
