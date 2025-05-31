@@ -78,6 +78,7 @@ class GeminiClient(AIClient):
     def __init__(self, api_key: str):
         configure(api_key=api_key)
         self.model = GenerativeModel("gemini-1.5-pro-002")
+        self.vision_model = GenerativeModel("gemini-1.5-flash")
 
     def text_to_audio(self, text: str, voice: str = "en-US-Wavenet-D") -> BytesIO:
         """
@@ -105,7 +106,7 @@ class GeminiClient(AIClient):
     def audio_to_text(self, audio_file: BytesIO) -> str:
         """
         Converts input audio to text using Google Cloud Speech-to-Text.
-        Gemini itself doesn’t transcribe audio.
+        Gemini itself doesn't transcribe audio.
         """
         from google.cloud import speech
 
@@ -134,3 +135,44 @@ class GeminiClient(AIClient):
             return response.text.strip()
         except GoogleAPIError as e:
             return f"Error from Gemini: {str(e)}"
+
+    def describe_image(self, image_content: BytesIO) -> str:
+        """
+        Takes an image as BytesIO and returns a detailed description using Gemini Vision.
+        The description is formatted to be informative and useful for future model interactions.
+        
+        Args:
+            image_content (BytesIO): The image content to analyze
+            
+        Returns:
+            str: A detailed description of the image
+        """
+        try:
+            # Convert BytesIO to base64 for Gemini
+            image_content.seek(0)
+            image_bytes = image_content.read()
+            image_parts = [
+                {
+                    "mime_type": "image/jpeg",
+                    "data": image_bytes
+                }
+            ]
+
+            prompt = """
+            Please provide a detailed description of this image that covers:
+            1. Main subjects and their characteristics
+            2. Important visual elements and their spatial relationships
+            3. Colors, lighting, and overall composition
+            4. Any text or numbers visible in the image
+            5. Context and setting
+            
+            Format the description in clear, natural language that would be helpful for answering questions about the image later.
+            """
+
+            response = self.vision_model.generate_content(
+                contents=[prompt, image_parts[0]]
+            )
+            
+            return response.text.strip()
+        except GoogleAPIError as e:
+            return f"Error analyzing image: {str(e)}"
