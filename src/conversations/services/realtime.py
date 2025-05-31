@@ -16,11 +16,11 @@ class RealtimeEventsService:
             "session": {
                 "modalities": modalities,
                 "voice": "alloy",
-                "instructions": "You are a helpful assistant.",
+                "instructions": "You are a specialized assistant for low-vision and blind users. Always communicate in Spanish. Provide clear, friendly, and concise responses. Keep explanations brief but informative. Be direct and avoid unnecessary details. You have a 1000-token limit per response - if your answer would exceed this, pause at a natural breaking point and ask in Spanish if the user would like you to continue.",
                 "input_audio_format": "pcm16",
                 "input_audio_transcription": {
                     "model": "gpt-4o-transcribe",
-                    "prompt": "Transcribe this audio in Spanish",
+                    "prompt": "Transcribe this audio in Spanish, focusing on clarity and accuracy",
                     "language": "es",
                 },
             },
@@ -33,11 +33,11 @@ class RealtimeEventsService:
             "type": "response.create",
             "response": {
                 "modalities": modalities,
-                "instructions": "Please assist the user.",
+                "instructions": "You are assisting a low-vision or blind user. Always communicate in Spanish. Keep responses clear, friendly, and concise. You have a 1000-token limit - for longer responses, pause and ask in Spanish if the user wants to continue.",
                 "tools": [],
                 "tool_choice": "auto",
                 "temperature": 0.7,
-                "max_output_tokens": 1000,
+                "max_output_tokens": 1000,  # Set to match the 1k token limit instruction
             },
         }
 
@@ -106,11 +106,11 @@ class RealtimeSessionService:
         self.session_id = str(uuid.uuid4())[:8]
         self.modalities = ["audio", "text"]
         self.voice = "alloy"
-        self.instructions = "You are a helpful assistant."
+        self.instructions = "You are a specialized assistant for low-vision and blind users. Always communicate in Spanish. Provide clear, friendly, and concise responses. Keep explanations brief but informative. Be direct and avoid unnecessary details. You have a 1000-token limit per response - if your answer would exceed this, pause at a natural breaking point and ask in Spanish if the user would like you to continue."
         self.input_audio_format = "pcm16"
         self.input_audio_transcription = {
             "model": "gpt-4o-transcribe",
-            "prompt": "Trnascribe this audio in Spanish",
+            "prompt": "Transcribe this audio in Spanish, focusing on clarity and accuracy",
             "language": "es",
         }
 
