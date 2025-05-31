@@ -6,11 +6,13 @@ import base64
 import uuid
 import websockets
 import asyncio
+from utils.logger import Logger
 
+logger = Logger(__name__)
 
 class RealtimeEventsService:
     def get_first_session_update_event(modalities: List[str]):
-        print("sending first session update event")
+        logger.info("sending first session update event")
         return {
             "type": "session.update",
             "session": {
@@ -27,7 +29,7 @@ class RealtimeEventsService:
         }
 
     def get_response_create_event(modalities: List[str]):
-        print("sending response create event")
+        logger.info("sending response create event")
         return {
             "event_id": "event_234",
             "type": "response.create",
@@ -37,12 +39,12 @@ class RealtimeEventsService:
                 "tools": [],
                 "tool_choice": "auto",
                 "temperature": 0.7,
-                "max_output_tokens": 1000,  # Set to match the 1k token limit instruction
+                "max_output_tokens": 1000,
             },
         }
 
     def get_conversation_text_item_create_event(text: str):
-        print("sending conversation text item create event")
+        logger.info("sending conversation text item create event")
         return {
             "type": "conversation.item.create",
             "item": {
@@ -58,7 +60,7 @@ class RealtimeEventsService:
         }
 
     def get_conversation_audio_item_create_event(audio_base64: str):
-        print("sending conversation audio item create event")
+        logger.info("sending conversation audio item create event")
         return {
             "type": "conversation.item.create",
             "item": {
@@ -74,7 +76,7 @@ class RealtimeEventsService:
         }
 
     def get_connection_headers():
-        print("sending connection headers")
+        logger.info("sending connection headers")
         return {
             "Authorization": f"Bearer {API_KEY}",
             "Content-Type": "application/json",
@@ -82,21 +84,21 @@ class RealtimeEventsService:
         }
 
     def get_connection_url(model: str):
-        print("connection url sent")
+        logger.info("connection url sent")
         return f"{OPENAI_WS_URL}?model={model}"
 
     def get_audio_buffer_append_event(audio_base64: str):
-        print("sending audio buffer append event")
+        logger.info("sending audio buffer append event")
         return {
-            "event_id": f"audio_append_{id(audio_base64)}",  # Generate unique event ID
+            "event_id": f"audio_append_{id(audio_base64)}",
             "type": "input_audio_buffer.append",
             "audio": audio_base64,
         }
 
     def get_audio_buffer_commit_event():
-        print("sending audio buffer commit event")
+        logger.info("sending audio buffer commit event")
         return {
-            "event_id": f"audio_commit_{id(object())}",  # Generate unique event ID
+            "event_id": f"audio_commit_{id(object())}",
             "type": "input_audio_buffer.commit",
         }
 
@@ -140,9 +142,9 @@ class RealtimeSessionService:
     ):
         while True:
             try:
-                print("receiving audio")
+                logger.info("receiving audio")
                 data = await internal_websocket.receive_bytes()
-                print("audio received")
+                logger.info("audio received")
                 # Convert audio bytes to base64
                 audio_base64 = base64.b64encode(data).decode("utf-8")
                 # Create a new audio message
@@ -152,11 +154,9 @@ class RealtimeSessionService:
                     )
                 )
                 await external_websocket.send(json.dumps(new_message))
-                print("commit event sent")
+                logger.info("commit event sent")
             except Exception as e:
-                print(
-                    f"Error in client_to_external audio handling {self.session_id}: {e}"
-                )
+                logger.error(f"Error in client_to_external audio handling {self.session_id}: {e}")
                 break
 
     async def _openai_websocket_listener(
@@ -182,9 +182,7 @@ class RealtimeSessionService:
                     audio_data = base64.b64decode(event.get("delta"))
                     await internal_websocket.send_bytes(audio_data)
             except Exception as e:
-                print(
-                    f"Error in external_to_client audio handling {self.session_id}: {e}"
-                )
+                logger.error(f"Error in external_to_client audio handling {self.session_id}: {e}")
                 break
 
     async def connect(self, internal_websocket: WebSocket):
@@ -192,7 +190,7 @@ class RealtimeSessionService:
             self._get_connection_url(),
             extra_headers=self._get_connection_headers(),
         ) as external_ws:
-            print(f"connected to external ws {self.session_id}")
+            logger.info(f"connected to external ws {self.session_id}")
             external_ws.send(json.dumps(self._get_first_session_update_event()))
             await asyncio.gather(
                 self._openai_websocket_listener(internal_websocket, external_ws),
