@@ -13,6 +13,7 @@ from src.conversations.services import RealtimeSessionService, ImageTranscriptio
 from src.conversations.repositories import ImageTranscriptionRepository
 from src.files.services import FileService
 from src.files.repositories import FilesRepository
+from src.conversations.schemas.image_transcription import ImageTranscriptionSchema
 
 router = APIRouter(prefix="/conversations", tags=["conversations"])
 logger = Logger(__name__)
@@ -35,7 +36,7 @@ async def audio_websocket(websocket: WebSocket):
     await service.connect(websocket)
 
 
-@router.post("/image")
+@router.post("/image", response_model=ImageTranscriptionSchema)
 async def upload_image(image: UploadFile = File(...)):
     logger = Logger(__name__)
     gemini_client = GeminiClient(settings.GOOGLE_API_KEY)
@@ -49,4 +50,4 @@ async def upload_image(image: UploadFile = File(...)):
         gemini_client, files_service, image_transcriptino_repository, logger
     )
     image_description = await service.transcribe_iamge(image)
-    return {"image_description": image_description.transcription}
+    return ImageTranscriptionSchema.model_validate(image_description)
