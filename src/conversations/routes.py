@@ -14,7 +14,10 @@ from src.conversations.services import (
     ImageTranscriptionService,
     SessionService,
 )
-from src.conversations.repositories import ImageTranscriptionRepository, SessionRepository
+from src.conversations.repositories import (
+    ImageTranscriptionRepository,
+    SessionRepository,
+)
 from src.files.services import FileService
 from src.files.repositories import FilesRepository
 from src.conversations.schemas.image_transcription import ImageTranscriptionSchema

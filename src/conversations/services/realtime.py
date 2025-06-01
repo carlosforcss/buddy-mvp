@@ -7,11 +7,35 @@ import uuid
 import websockets
 import asyncio
 from utils.logger import Logger
+from utils.ai import OpenAIClient
+from utils.s3 import S3Client
+from src.files.services import FileService
+from src.files.repositories import FilesRepository
+from src.conversations.repositories import AudioTranscriptionRepository
+from src.conversations.services.audio_transcription_service import (
+    AudioTranscriptionService,
+)
 
 logger = Logger(__name__)
 
+
 class RealtimeEventsService:
-    def get_first_session_update_event(modalities: List[str]):
+    def __init__(
+        self,
+        modalities: List[str],
+        voice: str,
+        instructions: str,
+        input_audio_format: str,
+        input_audio_transcription: dict,
+    ):
+        self.session_id = str(uuid.uuid4())[:8]
+        self.modalities = modalities
+        self.voice = voice
+        self.instructions = instructions
+        self.input_audio_format = input_audio_format
+        self.input_audio_transcription = input_audio_transcription
+
+    def get_first_session_update_event(self, modalities: List[str]):
         logger.info("sending first session update event")
         return {
             "type": "session.update",
@@ -28,7 +52,7 @@ class RealtimeEventsService:
             },
         }
 
-    def get_response_create_event(modalities: List[str]):
+    def get_response_create_event(self, modalities: List[str]):
         logger.info("sending response create event")
         return {
             "event_id": "event_234",
@@ -43,7 +67,7 @@ class RealtimeEventsService:
             },
         }
 
-    def get_conversation_text_item_create_event(text: str):
+    def get_conversation_text_item_create_event(self, text: str):
         logger.info("sending conversation text item create event")
         return {
             "type": "conversation.item.create",
@@ -59,7 +83,7 @@ class RealtimeEventsService:
             },
         }
 
-    def get_conversation_audio_item_create_event(audio_base64: str):
+    def get_conversation_audio_item_create_event(self, audio_base64: str):
         logger.info("sending conversation audio item create event")
         return {
             "type": "conversation.item.create",
@@ -75,19 +99,19 @@ class RealtimeEventsService:
             },
         }
 
-    def get_connection_headers():
+    def get_connection_headers(self):
         logger.info("sending connection headers")
         return {
-            "Authorization": f"Bearer {API_KEY}",
+            "Authorization": f"Bearer {settings.OPENAI_REALTIME_API_KEY}",
             "Content-Type": "application/json",
             "OpenAI-Beta": "realtime=v1",
         }
 
-    def get_connection_url(model: str):
+    def get_connection_url(self, model: str):
         logger.info("connection url sent")
-        return f"{OPENAI_WS_URL}?model={model}"
+        return f"{settings.OPENAI_REALTIME_URL}?model={model}"
 
-    def get_audio_buffer_append_event(audio_base64: str):
+    def get_audio_buffer_append_event(self, audio_base64: str):
         logger.info("sending audio buffer append event")
         return {
             "event_id": f"audio_append_{id(audio_base64)}",
@@ -95,7 +119,7 @@ class RealtimeEventsService:
             "audio": audio_base64,
         }
 
-    def get_audio_buffer_commit_event():
+    def get_audio_buffer_commit_event(self):
         logger.info("sending audio buffer commit event")
         return {
             "event_id": f"audio_commit_{id(object())}",
@@ -115,17 +139,35 @@ class RealtimeSessionService:
             "prompt": "Transcribe this audio in Spanish, focusing on clarity and accuracy",
             "language": "es",
         }
-        
+        # Initialize services
+        self.openai_client = OpenAIClient(settings.OPENAI_API_KEY)
+        self.files_service = FileService(
+            S3Client(),
+            FilesRepository(logger),
+            logger,
+        )
+        self.audio_transcription_repository = AudioTranscriptionRepository()
+        self.audio_transcription_service = AudioTranscriptionService(
+            self.openai_client,
+            self.files_service,
+            self.audio_transcription_repository,
+            logger,
+        )
+        self.session_events_service = RealtimeEventsService(
+            self.modalities,
+            self.voice,
+            self.instructions,
+            self.input_audio_format,
+            self.input_audio_transcription,
+        )
+
     def get_tools(self):
         return [
             {
                 "name": "get_last_image_description",
                 "type": "function",
                 "description": "Use this tool whenever the user implies any need to visually interpret, read, identify, analyze, describe, or find something in an image. This includes phrases like 'What is this?', 'Can you read this?', 'Describe the image', 'What do you see?', 'Is there any text here?', 'Look at this and tell me…', or similar. If the user implies a visual task, always call this tool without guessing or answering directly. Use it to describe the most recently uploaded image.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {}
-                }
+                "parameters": {"type": "object", "properties": {}},
             },
             {
                 "name": "get_chihuahua_weather",
@@ -136,10 +178,10 @@ class RealtimeSessionService:
                     "properties": {
                         "location": {
                             "type": "string",
-                            "description": "The location to get the weather for"
+                            "description": "The location to get the weather for",
                         }
-                    }
-                }
+                    },
+                },
             },
         ]
 
@@ -175,19 +217,28 @@ class RealtimeSessionService:
                 logger.info("receiving audio")
                 data = await internal_websocket.receive_bytes()
                 logger.info("audio received")
-                # Convert audio bytes to base64
+
+                # Process audio transcription
+                audio_transcription = (
+                    await self.audio_transcription_service.transcribe_audio(data)
+                )
+                logger.info(
+                    f"Audio transcription created with ID: {audio_transcription.id}"
+                )
+
+                # Convert audio bytes to base64 for the message
                 audio_base64 = base64.b64encode(data).decode("utf-8")
-                print(audio_base64[0:50])
+
                 # Create a new audio message
-                new_message = (
-                    RealtimeEventsService.get_conversation_audio_item_create_event(
-                        audio_base64
-                    )
+                new_message = self.session_events_service.get_conversation_audio_item_create_event(
+                    audio_base64
                 )
                 await external_websocket.send(json.dumps(new_message))
                 logger.info("commit event sent")
             except Exception as e:
-                logger.error(f"Error in client_to_external audio handling {self.session_id}: {e}")
+                logger.error(
+                    f"Error in client_to_external audio handling {self.session_id}: {e}"
+                )
                 break
 
     async def _openai_websocket_listener(
@@ -201,9 +252,12 @@ class RealtimeSessionService:
                     await internal_websocket.send_text(
                         json.dumps({"log": f"{event}"}, indent=4)
                     )
-                if event.get("type") == "conversation.item.created" and event.get("item").get("role") == "user":
+                if (
+                    event.get("type") == "conversation.item.created"
+                    and event.get("item").get("role") == "user"
+                ):
                     response_create_event = (
-                        RealtimeEventsService.get_response_create_event(
+                        self.session_events_service.get_response_create_event(
                             ["audio", "text"]
                         )
                     )
@@ -213,7 +267,9 @@ class RealtimeSessionService:
                     audio_data = base64.b64decode(event.get("delta"))
                     await internal_websocket.send_bytes(audio_data)
             except Exception as e:
-                logger.error(f"Error in external_to_client audio handling {self.session_id}: {e}")
+                logger.error(
+                    f"Error in external_to_client audio handling {self.session_id}: {e}"
+                )
                 break
 
     async def connect(self, internal_websocket: WebSocket):
@@ -222,7 +278,13 @@ class RealtimeSessionService:
             extra_headers=self._get_connection_headers(),
         ) as external_ws:
             logger.info(f"connected to external ws {self.session_id}")
-            await external_ws.send(json.dumps(self._get_first_session_update_event()))
+            await external_ws.send(
+                json.dumps(
+                    self.session_events_service.get_first_session_update_event(
+                        self.modalities
+                    )
+                )
+            )
             await asyncio.gather(
                 self._openai_websocket_listener(internal_websocket, external_ws),
                 self._buddy_websocket_listener(internal_websocket, external_ws),

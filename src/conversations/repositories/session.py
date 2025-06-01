@@ -18,4 +18,4 @@ class SessionRepository:
     @staticmethod
     async def get_by_id(id: int) -> Session:
         """Get a session by its ID"""
-        return await Session.get(id=id) 
+        return await Session.get(id=id)

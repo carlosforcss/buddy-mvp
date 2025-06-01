@@ -29,14 +29,16 @@ class ImageTranscriptionService:
         4. Store the transcription in the database
         """
         self.logger.info(f"Processing image: {image.filename}")
-        
+
         # Read image content
         image_content = BytesIO(await image.read())
-        
+
         # Get image description from Gemini
         image_text_transcription = self.client.describe_image(image_content)
-        self.logger.info(f"Generated image description: {image_text_transcription[:100]}...")
-        
+        self.logger.info(
+            f"Generated image description: {image_text_transcription[:100]}..."
+        )
+
         # Save image to S3
         file_format = image.filename.split(".")[-1]
         file_name = f"{uuid.uuid4()}.{file_format}"
@@ -44,10 +46,10 @@ class ImageTranscriptionService:
         file = await self.files_service.upload_file(
             image_content.read(), file_format, file_name
         )
-        
+
         # Store transcription in database
         image_transcription = await self.image_transcription_repository.create(
             file=file, transcription=image_text_transcription
         )
-        
+
         return image_transcription

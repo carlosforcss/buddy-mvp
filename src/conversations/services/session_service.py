@@ -28,4 +28,4 @@ class SessionService:
         Get a session by its external ID
         """
         self.logger.info(f"Getting session with external_id: {external_id}")
-        return await self.session_repository.get_by_external_id(external_id) 
+        return await self.session_repository.get_by_external_id(external_id)

@@ -140,10 +140,10 @@ class GeminiClient(AIClient):
         """
         Takes an image as BytesIO and returns a detailed description using Gemini Vision.
         The description is formatted to be informative and useful for future model interactions.
-        
+
         Args:
             image_content (BytesIO): The image content to analyze
-            
+
         Returns:
             str: A detailed description of the image
         """
@@ -151,12 +151,7 @@ class GeminiClient(AIClient):
             # Convert BytesIO to base64 for Gemini
             image_content.seek(0)
             image_bytes = image_content.read()
-            image_parts = [
-                {
-                    "mime_type": "image/jpeg",
-                    "data": image_bytes
-                }
-            ]
+            image_parts = [{"mime_type": "image/jpeg", "data": image_bytes}]
 
             prompt = """
             Please provide a detailed description of this image that covers:
@@ -172,7 +167,7 @@ class GeminiClient(AIClient):
             response = self.vision_model.generate_content(
                 contents=[prompt, image_parts[0]]
             )
-            
+
             return response.text.strip()
         except GoogleAPIError as e:
             return f"Error analyzing image: {str(e)}"
