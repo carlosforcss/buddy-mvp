@@ -69,4 +69,7 @@ async def upload_image(image: UploadFile = File(...)):
         gemini_client, files_service, image_transcriptino_repository, logger
     )
     image_description = await service.transcribe_iamge(image)
+    realtime_session_service = RealtimeSessionService.get_active_connection()
+    if realtime_session_service:
+        await realtime_session_service.send_image_transcription(image_description.transcription)
     return ImageTranscriptionSchema.model_validate(image_description)

@@ -8,38 +8,51 @@ from src.conversations.routes import router as conversations_router
 from config.db import initialize_db
 
 
-app = FastAPI(
-    title="Buddy API helps to implement real-life accessibility", version="0.1.0"
-)
+def get_app():
+    app = FastAPI(
+        title="Buddy API helps to implement real-life accessibility", 
+        version="0.1.0"
+    )
 
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
-    allow_credentials=True,
-    allow_methods=["*"],  # Allows all methods
-    allow_headers=["*"],  # Allows all headers
-)
+    # Add CORS middleware
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],  # Allows all origins
+        allow_credentials=True,
+        allow_methods=["*"],  # Allows all methods
+        allow_headers=["*"],  # Allows all headers
+    )
 
-# 3. "Include" the router in the app
-app.include_router(file_router)
-app.include_router(audio_router)
-app.include_router(conversations_router)
+    # 3. "Include" the router in the app
+    app.include_router(file_router)
+    app.include_router(audio_router)
+    app.include_router(conversations_router)
 
-register_tortoise(
-    app,
-    db_url="sqlite://db.sqlite3",
-    modules={
-        "models": [
-            "src.files.models",
-            "src.conversations.models",
-        ]
-    },
-    generate_schemas=True,
-    add_exception_handlers=True,
-)
+    register_tortoise(
+        app,
+        db_url="sqlite://db.sqlite3",
+        modules={
+            "models": [
+                "src.files.models",
+                "src.conversations.models",
+            ]
+        },
+        generate_schemas=True,
+        add_exception_handlers=True,
+    )
+
+    return app
+
 
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("main:app", reload=True, host="0.0.0.0", port=8000)
+    uvicorn.run(
+        "main:get_app", 
+        reload=True, 
+        host="0.0.0.0", 
+        port=8000, 
+        factory=True,
+        reload_dirs=["src"],
+    )
+

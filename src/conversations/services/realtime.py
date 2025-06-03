@@ -19,6 +19,9 @@ from src.conversations.services.audio_transcription_service import (
 logger = Logger(__name__)
 
 
+active_connections = list()
+
+
 class RealtimeEventsService:
     def __init__(
         self,
@@ -36,6 +39,7 @@ class RealtimeEventsService:
         self.input_audio_format = input_audio_format
         self.input_audio_transcription = input_audio_transcription
         self.tools = tools
+
     def get_first_session_update_event(self, modalities: List[str]):
         logger.info("sending first session update event")
         return {
@@ -69,13 +73,13 @@ class RealtimeEventsService:
             },
         }
 
-    def get_conversation_text_item_create_event(self, text: str):
+    def get_conversation_text_item_create_event(self, text: str, role: str = "user"):
         logger.info("sending conversation text item create event")
         return {
             "type": "conversation.item.create",
             "item": {
                 "type": "message",
-                "role": "user",
+                "role": role,
                 "content": [
                     {
                         "type": "input_text",
@@ -197,6 +201,28 @@ class RealtimeSessionService:
 
     def _get_connection_url(self):
         return f"{settings.OPENAI_REALTIME_URL}?model={settings.OPENAI_REALTIME_MODEL}"
+    
+    def _remove_active_connection(self):
+        try:
+            active_connections.remove(self)
+        except ValueError:
+            logger.info(f"Connection not found for {self.session_id}")
+     
+    @staticmethod
+    def get_active_connection():
+        try:
+            return active_connections[0]
+        except Exception as e:
+            logger.error(f"Error getting active connection: {e}")
+            return None
+        
+    async def send_image_transcription(self, image_transcription: str):
+        logger.info("sending image transcription")
+        new_message = self.session_events_service.get_conversation_text_item_create_event(
+            image_transcription, role="system"
+        )
+        await self.external_ws.send(json.dumps(new_message))
+        logger.info("image transcription sent")
 
     async def _buddy_websocket_listener(
         self, internal_websocket: WebSocket, external_websocket: WebSocket
@@ -212,7 +238,7 @@ class RealtimeSessionService:
                     await self.audio_transcription_service.transcribe_audio(data)
                 )
                 logger.info(
-                    f"Audio transcription created with ID: {audio_transcription.id}"
+                    f"Audio transcription created: {audio_transcription.id}"
                 )
 
                 # Convert audio bytes to base64 for the message
@@ -224,12 +250,19 @@ class RealtimeSessionService:
                 )
                 await external_websocket.send(json.dumps(new_message))
                 logger.info("commit event sent")
+            except websockets.ConnectionClosed:
+                logger.info(f"Connection closed for {self.session_id}")
+                await self.external_ws.close()
+                self._remove_active_connection()
+                break
             except Exception as e:
                 logger.error(
                     f"Error in client_to_external audio handling {self.session_id}: {e}"
                 )
+                await self.external_ws.close()
+                self._remove_active_connection()
                 break
-
+            
     async def _openai_websocket_listener(
         self, internal_websocket: WebSocket, external_websocket: WebSocket
     ):
@@ -255,10 +288,15 @@ class RealtimeSessionService:
                 if event.get("type") == "response.audio.delta":
                     audio_data = base64.b64decode(event.get("delta"))
                     await internal_websocket.send_bytes(audio_data)
+            except websockets.ConnectionClosed:
+                logger.info(f"Connection closed for {self.session_id}")
+                await self.internal_ws.close()
+                break
             except Exception as e:
                 logger.error(
                     f"Error in external_to_client audio handling {self.session_id}: {e}"
                 )
+                await self.internal_ws.close()
                 break
 
     async def connect(self, internal_websocket: WebSocket):
@@ -266,7 +304,10 @@ class RealtimeSessionService:
             self._get_connection_url(),
             extra_headers=self._get_connection_headers(),
         ) as external_ws:
+            active_connections.append(self)
             logger.info(f"connected to external ws {self.session_id}")
+            self.external_ws = external_ws
+            self.internal_ws = internal_websocket
             await external_ws.send(
                 json.dumps(
                     self.session_events_service.get_first_session_update_event(
