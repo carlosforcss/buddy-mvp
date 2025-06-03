@@ -27,6 +27,7 @@ class RealtimeEventsService:
         instructions: str,
         input_audio_format: str,
         input_audio_transcription: dict,
+        tools: List[dict],
     ):
         self.session_id = str(uuid.uuid4())[:8]
         self.modalities = modalities
@@ -34,7 +35,7 @@ class RealtimeEventsService:
         self.instructions = instructions
         self.input_audio_format = input_audio_format
         self.input_audio_transcription = input_audio_transcription
-
+        self.tools = tools
     def get_first_session_update_event(self, modalities: List[str]):
         logger.info("sending first session update event")
         return {
@@ -49,6 +50,7 @@ class RealtimeEventsService:
                     "prompt": "Transcribe this audio in Spanish, focusing on clarity and accuracy",
                     "language": "es",
                 },
+                "tools": self.tools,
             },
         }
 
@@ -159,6 +161,7 @@ class RealtimeSessionService:
             self.instructions,
             self.input_audio_format,
             self.input_audio_transcription,
+            self.get_tools(),
         )
 
     def get_tools(self):
@@ -182,22 +185,8 @@ class RealtimeSessionService:
                         }
                     },
                 },
-            },
+            }, 
         ]
-
-    def _get_first_session_update_event(self):
-        return {
-            "type": "session.update",
-            "session": {
-                "modalities": self.modalities,
-                "voice": self.voice,
-                "instructions": self.instructions,
-                "input_audio_format": self.input_audio_format,
-                "tools": self.get_tools(),
-                "tool_choice": "auto",
-                "temperature": 1,
-            },
-        }
 
     def _get_connection_headers(self):
         return {
