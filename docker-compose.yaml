@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    command: uv run main.py
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=development
+    restart: unless-stopped 

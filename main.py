@@ -8,7 +8,7 @@ from src.conversations.routes import router as conversations_router
 from config.db import initialize_db
 
 
-def get_app():
+def get_app(*args):
     app = FastAPI(
         title="Buddy API helps to implement real-life accessibility", 
         version="0.1.0"
