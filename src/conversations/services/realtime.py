@@ -1,11 +1,13 @@
 from typing import List
 from fastapi import WebSocket
+from starlette.websockets import WebSocketState
 from config import settings
 import json
 import base64
 import uuid
 import websockets
 import asyncio
+from websockets.exceptions import ConnectionClosed
 from utils.logger import Logger
 from utils.ai import OpenAIClient
 from utils.s3 import S3Client
@@ -15,7 +17,7 @@ from src.conversations.repositories import AudioTranscriptionRepository
 from src.conversations.services.audio_transcription_service import (
     AudioTranscriptionService,
 )
-from src.conversations.repositories.session_repository import SessionRepository
+from src.conversations.repositories.session import SessionRepository
 from src.conversations.services.session_service import SessionService
 
 logger = Logger(__name__)
@@ -134,7 +136,6 @@ class RealtimeEventsService:
 
 class RealtimeSessionService:
     def __init__(self):
-        self.session_id = str(uuid.uuid4())[:8]
         self.modalities = ["audio", "text"]
         self.voice = "alloy"
         self.instructions = "You are a specialized assistant for low-vision and blind users. Always communicate in Spanish. Provide clear, friendly, and concise responses. Keep explanations brief but informative. Be direct and avoid unnecessary details. You have a 1000-token limit per response - if your answer would exceed this, pause at a natural breaking point and ask in Spanish if the user would like you to continue."
@@ -190,7 +191,7 @@ class RealtimeSessionService:
                         }
                     },
                 },
-            }, 
+            },
         ]
 
     def _get_connection_headers(self):
@@ -202,17 +203,17 @@ class RealtimeSessionService:
 
     def _get_connection_url(self):
         return f"{settings.OPENAI_REALTIME_URL}?model={settings.OPENAI_REALTIME_MODEL}"
-    
-    async def _handle_connection_close(self):
-        logger.info(f"Connection closed for {self.session_id}")
-        self.session_service.close_session(self.session_id)
-        if hasattr(self, 'external_ws'):
+
+    async def _handle_connection_close(self, session):
+        logger.info(f"Connection closed for session {session.id}")
+        await self.session_repository.close_session(session)
+        if hasattr(self, "external_ws") and not self.external_ws.closed:
             await self.external_ws.close()
-        if hasattr(self, 'internal_ws'):
+        if hasattr(self, "internal_ws") and not self.internal_ws.closed:
             await self.internal_ws.close()
 
     async def _buddy_websocket_listener(
-        self, internal_websocket: WebSocket, external_websocket: WebSocket
+        self, internal_websocket: WebSocket, external_websocket: WebSocket, session
     ):
         while True:
             try:
@@ -223,9 +224,7 @@ class RealtimeSessionService:
                 audio_transcription = (
                     await self.audio_transcription_service.transcribe_audio(data)
                 )
-                logger.info(
-                    f"Audio transcription created: {audio_transcription.id}"
-                )
+                logger.info(f"Audio transcription created: {audio_transcription.id}")
 
                 audio_base64 = base64.b64encode(data).decode("utf-8")
                 new_message = self.session_events_service.get_conversation_audio_item_create_event(
@@ -234,17 +233,17 @@ class RealtimeSessionService:
                 await external_websocket.send(json.dumps(new_message))
                 logger.info("commit event sent")
             except websockets.ConnectionClosed:
-                await self._handle_connection_close()
+                await self._handle_connection_close(session)
                 break
             except Exception as e:
                 logger.error(
-                    f"Error in client_to_external audio handling {self.session_id}: {e}"
+                    f"Error in client_to_external audio handling {session.id}: {e}"
                 )
-                await self._handle_connection_close()
+                await self._handle_connection_close(session)
                 break
 
     async def _openai_websocket_listener(
-        self, internal_websocket: WebSocket, external_websocket: WebSocket
+        self, internal_websocket: WebSocket, external_websocket: WebSocket, session
     ):
         while True:
             try:
@@ -268,22 +267,23 @@ class RealtimeSessionService:
                     audio_data = base64.b64decode(event.get("delta"))
                     await internal_websocket.send_bytes(audio_data)
             except websockets.ConnectionClosed:
-                await self._handle_connection_close()
                 break
             except Exception as e:
                 logger.error(
-                    f"Error in external_to_client audio handling {self.session_id}: {e}"
+                    f"Error in external_to_client audio handling {session.id}: {e}"
                 )
-                await self._handle_connection_close()
                 break
 
-    async def connect(self, internal_websocket: WebSocket):
+    async def connect(self, internal_websocket: WebSocket, session_id: int):
+        session = await self.session_repository.get_by_id(session_id)
+        if not session:
+            raise ValueError(f"Session {session_id} not found")
+
         async with websockets.connect(
             self._get_connection_url(),
             extra_headers=self._get_connection_headers(),
         ) as external_ws:
-            self.session_service.open_session(self.session_id)
-            logger.info(f"connected to external ws {self.session_id}")
+            logger.info(f"connected to external ws for session {session_id}")
             self.external_ws = external_ws
             self.internal_ws = internal_websocket
             await external_ws.send(
@@ -294,6 +294,10 @@ class RealtimeSessionService:
                 )
             )
             await asyncio.gather(
-                self._openai_websocket_listener(internal_websocket, external_ws),
-                self._buddy_websocket_listener(internal_websocket, external_ws),
+                self._openai_websocket_listener(
+                    internal_websocket, external_ws, session
+                ),
+                self._buddy_websocket_listener(
+                    internal_websocket, external_ws, session
+                ),
             )

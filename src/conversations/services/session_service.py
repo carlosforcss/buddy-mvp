@@ -2,7 +2,7 @@ from uuid import uuid4
 from utils.logger import Logger
 from src.conversations.repositories.session import SessionRepository
 from src.conversations.models.session import Session
-from src.conversations.repositories.session_repository import SessionStatus
+from src.conversations.repositories.session import SessionStatus
 
 
 class SessionService:
@@ -24,12 +24,13 @@ class SessionService:
         self.logger.info(f"Created session with external_id: {external_id}")
         return session
 
-    async def get_session(self, external_id: str) -> Session:
+    async def get_session(self, session_id: int) -> Session:
         """
         Get a session by its external ID
         """
-        self.logger.info(f"Getting session with external_id: {external_id}")
-        return await self.session_repository.get_by_external_id(external_id)
+        self.logger.info(f"Getting session with id: {session_id}")
+
+        return await self.session_repository.get_by_id(session_id)
 
     def open_session(self, session_id: str) -> None:
         try:
@@ -58,7 +59,6 @@ class SessionService:
         try:
             self.session_repository.delete_session(session_id)
             self.logger.info(f"Session {session_id} deleted successfully")
-        except Exception as 
-        e:
+        except Exception as e:
             self.logger.error(f"Error deleting session {session_id}: {e}")
             raise

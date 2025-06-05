@@ -44,12 +44,14 @@ class AudioTranscriptionService:
             # Read the resulting MP3
             mp3_file.seek(0)
             return mp3_file.read()
-        
+
     def transform_mp3_to_pcm(self, audio_content: bytes) -> bytes:
         """
         Convert MP3 audio bytes to raw PCM (16-bit mono, 24kHz) using ffmpeg.
         """
-        with tempfile.NamedTemporaryFile(suffix=".mp3") as mp3_file, tempfile.NamedTemporaryFile(suffix=".pcm") as pcm_file:
+        with tempfile.NamedTemporaryFile(
+            suffix=".mp3"
+        ) as mp3_file, tempfile.NamedTemporaryFile(suffix=".pcm") as pcm_file:
             # Write the MP3 content to a temporary file
             mp3_file.write(audio_content)
             mp3_file.flush()
@@ -62,7 +64,7 @@ class AudioTranscriptionService:
                     format="s16le",  # 16-bit PCM
                     acodec="pcm_s16le",
                     ac=1,  # mono
-                    ar="24000"  # 24kHz sampling rate
+                    ar="24000",  # 24kHz sampling rate
                 )
                 .run(quiet=True, overwrite_output=True)
             )
@@ -70,7 +72,6 @@ class AudioTranscriptionService:
             # Read the resulting PCM data
             pcm_file.seek(0)
             return pcm_file.read()
-        
 
     async def transcribe_audio(
         self, audio_content: bytes

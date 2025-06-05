@@ -2,13 +2,21 @@ from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, Field, validator
 from src.files.schemas.files_schemas import FileSchema
+from src.conversations.models.image_transcription import ImageTranscriptionStatus
 
 
 class ImageTranscriptionBase(BaseModel):
     """Base schema for image transcription without the id and timestamps"""
 
     file_id: int = Field(..., description="Id of the file object in the database")
+    session_id: int = Field(
+        ..., description="Id of the session this transcription belongs to"
+    )
     transcription: str = Field(..., description="The text transcription of the image")
+    status: ImageTranscriptionStatus = Field(
+        default=ImageTranscriptionStatus.CREATED,
+        description="Current status of the image transcription",
+    )
 
 
 class ImageTranscriptionCreate(ImageTranscriptionBase):
@@ -35,7 +43,9 @@ class ImageTranscription(ImageTranscriptionBase):
 class ImageTranscriptionSchema(BaseModel):
     id: Optional[int] = None
     file: FileSchema
+    session_id: int
     transcription: str
+    status: ImageTranscriptionStatus
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 

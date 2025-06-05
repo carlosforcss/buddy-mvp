@@ -10,8 +10,7 @@ from config.db import initialize_db
 
 def get_app(*args):
     app = FastAPI(
-        title="Buddy API helps to implement real-life accessibility", 
-        version="0.1.0"
+        title="Buddy API helps to implement real-life accessibility", version="0.1.0"
     )
 
     # Add CORS middleware
@@ -48,11 +47,10 @@ if __name__ == "__main__":
     import uvicorn
 
     uvicorn.run(
-        "main:get_app", 
-        reload=True, 
-        host="0.0.0.0", 
-        port=8000, 
+        "main:get_app",
+        reload=True,
+        host="0.0.0.0",
+        port=8000,
         factory=True,
         reload_dirs=["src"],
     )
-

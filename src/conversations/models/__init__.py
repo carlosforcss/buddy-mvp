@@ -1,5 +1,5 @@
 from .image_transcription import ImageTranscription
-from .session import Session
+from .session import Session, SessionStatus
 from .audio_transcription import AudioTranscription
 
 

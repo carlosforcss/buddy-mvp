@@ -3,7 +3,7 @@ import json
 import base64
 import asyncio
 import uuid
-from fastapi import APIRouter, WebSocket, File, UploadFile
+from fastapi import APIRouter, WebSocket, File, UploadFile, Path
 from utils.s3 import S3Client
 from utils.ai import OpenAIClient, GeminiClient
 from utils.logger import Logger
@@ -47,16 +47,21 @@ async def get_conversations(message: str):
     return {"answer": answer}
 
 
-@router.websocket("/realtime")
-async def audio_websocket(websocket: WebSocket):
+@router.websocket("/realtime/{session_id}")
+async def audio_websocket(
+    websocket: WebSocket,
+    session_id: int = Path(..., description="ID of the session this audio belongs to"),
+):
     await websocket.accept()
-    session_id = str(uuid.uuid4())[:8]
     service = RealtimeSessionService()
-    await service.connect(websocket)
+    await service.connect(websocket, session_id)
 
 
-@router.post("/image", response_model=ImageTranscriptionSchema)
-async def upload_image(image: UploadFile = File(...)):
+@router.post("/image/{session_id}", response_model=ImageTranscriptionSchema)
+async def upload_image(
+    image: UploadFile = File(...),
+    session_id: int = Path(..., description="ID of the session this image belongs to"),
+):
     logger = Logger(__name__)
     gemini_client = GeminiClient(settings.GOOGLE_API_KEY)
     files_service = FileService(
@@ -64,12 +69,14 @@ async def upload_image(image: UploadFile = File(...)):
         FilesRepository(logger),
         logger,
     )
-    image_transcriptino_repository = ImageTranscriptionRepository()
+    image_transcription_repository = ImageTranscriptionRepository()
+    session_repository = SessionRepository()
     service = ImageTranscriptionService(
-        gemini_client, files_service, image_transcriptino_repository, logger
+        gemini_client,
+        files_service,
+        image_transcription_repository,
+        session_repository,
+        logger,
     )
-    image_description = await service.transcribe_iamge(image)
-    realtime_session_service = RealtimeSessionService.get_active_connection()
-    if realtime_session_service:
-        await realtime_session_service.send_image_transcription(image_description.transcription)
+    image_description = await service.transcribe_image(image, session_id)
     return ImageTranscriptionSchema.model_validate(image_description)
