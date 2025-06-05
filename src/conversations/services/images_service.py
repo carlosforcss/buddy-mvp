@@ -1,4 +1,6 @@
 import uuid
+import asyncio
+from typing import Optional
 from io import BytesIO
 from utils.ai import AIClient
 from utils.logger import Logger
@@ -90,3 +92,24 @@ class ImageTranscriptionService:
     
     async def get_last_image_transcription(self, session_id: int) -> ImageTranscriptionRepository.model:
         return await self.image_transcription_repository.get_last_image_transcription(session_id)
+    async def wait_for_last_image_transcription_processing(
+        self, session_id: int
+    ) -> Optional[ImageTranscriptionRepository.model]:
+        """
+        Waits for the last image transcription to be processed, polling every 100ms.
+        Returns the transcription if processed, raises an error if failed,
+        or returns None after a timeout (~10 seconds).
+        """
+        max_iterations = 100
+        for _ in range(max_iterations):
+            image_transcription = await self.get_last_image_transcription(session_id)
+            
+            if image_transcription.status == ImageTranscriptionStatus.PROCESSED:
+                return image_transcription
+            
+            if image_transcription.status == ImageTranscriptionStatus.FAILED:
+                raise RuntimeError("Image transcription failed")
+            
+            await asyncio.sleep(0.1)
+        
+        return None

@@ -269,7 +269,7 @@ class RealtimeSessionService:
                     event.get("type") == "conversation.item.created"
                     and event.get("item").get("role") == "user"
                 ):
-                    last_image_transcription = await self.image_transcription_service.get_last_image_transcription(session.id)
+                    last_image_transcription = await self.image_transcription_service.wait_for_last_image_transcription_processing(session.id)
                     if last_image_transcription:
                         transcription_message = self.session_events_service.get_conversation_text_item_create_event(last_image_transcription.transcription, "system")
                         logger.info(f"Sending transcription event message.")
