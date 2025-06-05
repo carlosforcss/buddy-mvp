@@ -34,3 +34,7 @@ class ImageTranscriptionRepository:
         image_transcription.status = status
         await image_transcription.save()
         return image_transcription
+    
+    @staticmethod
+    async def get_last_image_transcription(session_id: int) -> ImageTranscription:
+        return await ImageTranscription.filter(session_id=session_id).order_by('-created_at').first()

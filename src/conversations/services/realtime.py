@@ -7,12 +7,15 @@ import base64
 import uuid
 import websockets
 import asyncio
+from utils.constants import OPENAI_REALTIME_INSTRUCTIONS
 from websockets.exceptions import ConnectionClosed
 from utils.logger import Logger
-from utils.ai import OpenAIClient
+from utils.ai import OpenAIClient, GeminiClient
 from utils.s3 import S3Client
 from src.files.services import FileService
 from src.files.repositories import FilesRepository
+from src.conversations.repositories.image_transcription import ImageTranscriptionRepository
+from src.conversations.services.images_service import ImageTranscriptionService
 from src.conversations.repositories import AudioTranscriptionRepository
 from src.conversations.services.audio_transcription_service import (
     AudioTranscriptionService,
@@ -138,7 +141,7 @@ class RealtimeSessionService:
     def __init__(self):
         self.modalities = ["audio", "text"]
         self.voice = "alloy"
-        self.instructions = "You are a specialized assistant for low-vision and blind users. Always communicate in Spanish. Provide clear, friendly, and concise responses. Keep explanations brief but informative. Be direct and avoid unnecessary details. You have a 1000-token limit per response - if your answer would exceed this, pause at a natural breaking point and ask in Spanish if the user would like you to continue."
+        self.instructions = OPENAI_REALTIME_INSTRUCTIONS
         self.input_audio_format = "pcm16"
         self.input_audio_transcription = {
             "model": "gpt-4o-transcribe",
@@ -147,6 +150,7 @@ class RealtimeSessionService:
         }
         # Initialize services
         self.openai_client = OpenAIClient(settings.OPENAI_API_KEY)
+        self.gemini_client = GeminiClient(settings.GOOGLE_API_KEY)
         self.files_service = FileService(
             S3Client(),
             FilesRepository(logger),
@@ -168,6 +172,14 @@ class RealtimeSessionService:
             self.input_audio_format,
             self.input_audio_transcription,
             self.get_tools(),
+        )
+        self.image_transcription_repository = ImageTranscriptionRepository()
+        self.image_transcription_service = ImageTranscriptionService(
+            self.gemini_client,
+            self.files_service,
+            self.image_transcription_repository,
+            self.session_repository,
+            logger,
         )
 
     def get_tools(self):
@@ -256,6 +268,22 @@ class RealtimeSessionService:
                 if (
                     event.get("type") == "conversation.item.created"
                     and event.get("item").get("role") == "user"
+                ):
+                    last_image_transcription = await self.image_transcription_service.get_last_image_transcription(session.id)
+                    if last_image_transcription:
+                        transcription_message = self.session_events_service.get_conversation_text_item_create_event(last_image_transcription.transcription, "system")
+                        logger.info(f"Sending transcription event message.")
+                        await external_websocket.send(json.dumps(transcription_message))
+                    else:
+                        response_create_event = (
+                            self.session_events_service.get_response_create_event(
+                                ["audio", "text"]
+                            )
+                        )
+                        await external_websocket.send(json.dumps(response_create_event))
+                if (
+                    event.get("type") == "conversation.item.created"
+                    and event.get("item").get("role") == "system"
                 ):
                     response_create_event = (
                         self.session_events_service.get_response_create_event(

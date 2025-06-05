@@ -5,6 +5,7 @@ import requests
 import openai
 from google.generativeai import configure, GenerativeModel
 from google.api_core.exceptions import GoogleAPIError
+from utils.constants import GEMINI_IMAGE_TRANSCRIPTION_INSTRUCTIONS
 
 
 class AIClient(ABC):
@@ -153,16 +154,7 @@ class GeminiClient(AIClient):
             image_bytes = image_content.read()
             image_parts = [{"mime_type": "image/jpeg", "data": image_bytes}]
 
-            prompt = """
-            Please provide a detailed description of this image that covers:
-            1. Main subjects and their characteristics
-            2. Important visual elements and their spatial relationships
-            3. Colors, lighting, and overall composition
-            4. Any text or numbers visible in the image
-            5. Context and setting
-            
-            Format the description in clear, natural language that would be helpful for answering questions about the image later.
-            """
+            prompt = GEMINI_IMAGE_TRANSCRIPTION_INSTRUCTIONS
 
             response = self.vision_model.generate_content(
                 contents=[prompt, image_parts[0]]

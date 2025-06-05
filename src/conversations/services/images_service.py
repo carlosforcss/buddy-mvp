@@ -87,3 +87,6 @@ class ImageTranscriptionService:
             raise
 
         return image_transcription
+    
+    async def get_last_image_transcription(self, session_id: int) -> ImageTranscriptionRepository.model:
+        return await self.image_transcription_repository.get_last_image_transcription(session_id)
