@@ -104,6 +104,9 @@ class ImageTranscriptionService:
         for _ in range(max_iterations):
             image_transcription = await self.get_last_image_transcription(session_id)
             
+            if not image_transcription:
+                return None
+            
             if image_transcription.status == ImageTranscriptionStatus.PROCESSED:
                 return image_transcription
             

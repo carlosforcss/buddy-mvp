@@ -6,6 +6,7 @@ import json
 import base64
 import uuid
 import websockets
+from starlette.websockets import WebSocketState
 import asyncio
 from utils.constants import OPENAI_REALTIME_INSTRUCTIONS
 from websockets.exceptions import ConnectionClosed
@@ -219,9 +220,9 @@ class RealtimeSessionService:
     async def _handle_connection_close(self, session):
         logger.info(f"Connection closed for session {session.id}")
         await self.session_repository.close_session(session)
-        if hasattr(self, "external_ws") and not self.external_ws.closed:
+        if hasattr(self, "external_ws") and self.external_ws.open:
             await self.external_ws.close()
-        if hasattr(self, "internal_ws") and not self.internal_ws.closed:
+        if hasattr(self, "internal_ws") and self.internal_ws.client_state == WebSocketState.CONNECTED:
             await self.internal_ws.close()
 
     async def _buddy_websocket_listener(
@@ -285,6 +286,7 @@ class RealtimeSessionService:
                     event.get("type") == "conversation.item.created"
                     and event.get("item").get("role") == "system"
                 ):
+                    logger.info(f"{session.id} - Sending response create event")
                     response_create_event = (
                         self.session_events_service.get_response_create_event(
                             ["audio", "text"]
@@ -292,6 +294,7 @@ class RealtimeSessionService:
                     )
                     await external_websocket.send(json.dumps(response_create_event))
                 if event.get("type") == "response.audio.delta":
+                    logger.info(f"{session.id} - Receiving audio delta chunk")
                     audio_data = base64.b64decode(event.get("delta"))
                     await internal_websocket.send_bytes(audio_data)
             except websockets.ConnectionClosed:

@@ -3,10 +3,10 @@ class Logger:
         self.name = name
 
     def info(self, message: str):
-        print(f"[INFO] {self.name}: {message}")
+        print(f"[INFO] {self.name}: {message}", flush=True)
 
     def error(self, message: str):
-        print(f"[ERROR] {self.name}: {message}")
+        print(f"[ERROR] {self.name}: {message}", flush=True)
 
     def debug(self, message: str):
-        print(f"[DEBUG] {self.name}: {message}")
+        print(f"[DEBUG] {self.name}: {message}", flush=True)
