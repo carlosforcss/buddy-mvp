@@ -8,7 +8,7 @@ from fastapi.responses import StreamingResponse
 from io import BytesIO
 
 
-router = APIRouter(prefix="/files", tags=["files"])
+router = APIRouter(prefix="/api/files", tags=["files"])
 logger = Logger(__name__)
 
 

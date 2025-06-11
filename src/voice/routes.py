@@ -7,7 +7,7 @@ from utils.logger import Logger
 from src.voice.services import TranscriptionService
 
 
-router = APIRouter(prefix="/voice", tags=["voice"])
+router = APIRouter(prefix="/api/voice", tags=["voice"])
 logger = Logger(__name__)
 
 

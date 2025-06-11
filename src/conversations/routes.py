@@ -23,7 +23,7 @@ from src.files.repositories import FilesRepository
 from src.conversations.schemas.image_transcription import ImageTranscriptionSchema
 from src.conversations.schemas.session import Session as SessionSchema
 
-router = APIRouter(prefix="/conversations", tags=["conversations"])
+router = APIRouter(prefix="/api/conversations", tags=["conversations"])
 logger = Logger(__name__)
 
 
