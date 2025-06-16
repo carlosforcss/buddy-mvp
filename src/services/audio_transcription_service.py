@@ -1,26 +1,22 @@
 from io import BytesIO
 import uuid
 import ffmpeg
-from io import BytesIO
-import asyncio
 import tempfile
-from utils.ai import AIClient
 from utils.logger import Logger
 from src.repositories import AudioTranscriptionRepository
+from utils.ai import OpenAIClient
+from src.services.files_service import FileService
+from config.settings import OPENAI_API_KEY
+
+
+logger = Logger(__name__)
 
 
 class AudioTranscriptionService:
-    def __init__(
-        self,
-        ai_client: AIClient,
-        files_service: "FileService",
-        audio_transcription_repository: AudioTranscriptionRepository,
-        logger: Logger,
-    ):
-        self.client = ai_client
-        self.files_service = files_service
-        self.logger = logger
-        self.audio_transcription_repository = audio_transcription_repository
+    def __init__(self):
+        self.client = OpenAIClient(OPENAI_API_KEY)
+        self.files_service = FileService()
+        self.audio_transcription_repository = AudioTranscriptionRepository()
 
     async def transform_pcm_to_mp3(self, audio_content: bytes) -> bytes:
         """

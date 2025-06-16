@@ -9,18 +9,13 @@ import websockets
 from starlette.websockets import WebSocketState
 import asyncio
 from utils.constants import OPENAI_REALTIME_INSTRUCTIONS
-from websockets.exceptions import ConnectionClosed
 from utils.logger import Logger
-from utils.ai import OpenAIClient, GeminiClient
-from utils.s3 import S3Client
-from src.services import FileService
-from src.repositories import FilesRepository
 from src.repositories import ImageTranscriptionRepository
-from src.services import ImageTranscriptionService
-from src.repositories import AudioTranscriptionRepository
-from src.services import AudioTranscriptionService
+from src.services.images_service import ImageTranscriptionService
+from src.services.audio_transcription_service import AudioTranscriptionService
 from src.repositories import SessionRepository
-from src.services import SessionService
+from src.services.session_service import SessionService
+
 
 logger = Logger(__name__)
 
@@ -148,16 +143,7 @@ class RealtimeSessionService:
             "language": "es",
         }
         # Initialize services
-        self.openai_client = OpenAIClient(settings.OPENAI_API_KEY)
-        self.gemini_client = GeminiClient(settings.GOOGLE_API_KEY)
-        self.files_service = FileService()
-        self.audio_transcription_repository = AudioTranscriptionRepository()
-        self.audio_transcription_service = AudioTranscriptionService(
-            self.openai_client,
-            self.files_service,
-            self.audio_transcription_repository,
-            logger,
-        )
+        self.audio_transcription_service = AudioTranscriptionService()
         self.session_repository = SessionRepository()
         self.session_service = SessionService(self.session_repository, logger)
         self.session_events_service = RealtimeEventsService(
@@ -169,13 +155,7 @@ class RealtimeSessionService:
             self.get_tools(),
         )
         self.image_transcription_repository = ImageTranscriptionRepository()
-        self.image_transcription_service = ImageTranscriptionService(
-            self.gemini_client,
-            self.files_service,
-            self.image_transcription_repository,
-            self.session_repository,
-            logger,
-        )
+        self.image_transcription_service = ImageTranscriptionService()
 
     def get_tools(self):
         return [

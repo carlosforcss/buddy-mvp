@@ -1,7 +1,7 @@
 from utils.ai import AIClient
 from utils.logger import Logger
 from src.repositories import ImageTranscriptionRepository
-from src.services import FileService
+from src.services.files_service import FileService
 
 
 class ImageTranscriptionService:

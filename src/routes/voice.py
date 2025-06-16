@@ -4,7 +4,7 @@ from fastapi.responses import StreamingResponse
 from config import settings
 from utils.ai import OpenAIClient
 from utils.logger import Logger
-from src.services import TranscriptionService
+from src.services.transcription_service import TranscriptionService
 
 
 router = APIRouter(prefix="/api/voice", tags=["voice"])
@@ -16,7 +16,7 @@ async def get_text_from_audio(audio_file: UploadFile):
     """
     Getting text from audio an file.
     """
-    service = TranscriptionService(OpenAIClient(settings.OPENAI_API_KEY), None, logger)
+    service = TranscriptionService()
     file_content = BytesIO(await audio_file.read())
     text = service.get_text_from_audio(file_content)
     return {"text": text}
@@ -33,4 +33,4 @@ async def get_audio_from_text(text: str):
         audio,
         media_type="audio/mpeg",
         headers={"Content-Disposition": "attachment; filename=audio.mp3"},
-    ) 
+    )

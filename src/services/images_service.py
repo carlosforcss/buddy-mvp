@@ -2,27 +2,26 @@ import uuid
 import asyncio
 from typing import Optional
 from io import BytesIO
+from src.services.files_service import FileService
 from utils.ai import AIClient
 from utils.logger import Logger
 from src.repositories import ImageTranscriptionRepository
 from src.models import ImageTranscriptionStatus
 from src.repositories import SessionRepository
+from config.settings import GOOGLE_API_KEY
+from utils.ai import GeminiClient
+
+
+logger = Logger(__name__)
 
 
 class ImageTranscriptionService:
-    def __init__(
-        self,
-        ai_client: AIClient,
-        files_service: "FileService",
-        image_transcription_repository: ImageTranscriptionRepository,
-        session_repository: SessionRepository,
-        logger: Logger,
-    ):
-        self.client = ai_client
-        self.files_service = files_service
+    def __init__(self):
+        self.client = GeminiClient(GOOGLE_API_KEY)
+        self.files_service = FileService()
+        self.image_transcription_repository = ImageTranscriptionRepository()
+        self.session_repository = SessionRepository()
         self.logger = logger
-        self.image_transcription_repository = image_transcription_repository
-        self.session_repository = session_repository
 
     async def transcribe_image(
         self, image, session_id: int

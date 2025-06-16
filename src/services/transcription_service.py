@@ -1,12 +1,16 @@
 from io import BytesIO
-from utils.ai import AIClient
+from utils.logger import Logger
+from utils.ai import OpenAIClient
+from config.settings import OPENAI_API_KEY
+
+
+logger = Logger(__name__)
 
 
 class TranscriptionService:
-    def __init__(self, ai_client: AIClient, transcription_repository, logger):
-        self.transcription_repository = transcription_repository
+    def __init__(self):
         self.logger = logger
-        self.ai_client = ai_client
+        self.ai_client = OpenAIClient(OPENAI_API_KEY)
 
     def get_audio_from_text(self, text: str):
         """

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Body, UploadFile
 from utils.s3 import S3Client
 from utils.logger import Logger
-from src.services import FileService
+from src.services.files_service import FileService
 from src.schemas.files import FileSchema
 from src.repositories import FilesRepository
 from fastapi.responses import StreamingResponse

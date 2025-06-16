@@ -1,11 +1,15 @@
-from utils.ai import AIClient
+from utils.ai import OpenAIClient
+from utils.logger import Logger
+from config.settings import OPENAI_API_KEY
+
+
+logger = Logger(__name__)
 
 
 class ConversationsService:
-    def __init__(self, ai_client: AIClient, conversations_repository, logger):
-        self.conversations_repository = conversations_repository
+    def __init__(self):
         self.logger = logger
-        self.ai_client = ai_client
+        self.ai_client = OpenAIClient(OPENAI_API_KEY)
 
     async def send_simple_message(self, message: str) -> str:
         """
