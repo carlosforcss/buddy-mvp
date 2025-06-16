@@ -67,18 +67,25 @@ The application will be available at `http://localhost:8000`
 ```
 buddy/
 ├── src/
-│   ├── conversations/
-│   │   ├── services/
-│   │   │   └── audio_transcription_service.py  # Audio processing and transcription
-│   │   └── repositories/                       # Data access layer
-│   ├── files/
-│   │   └── services/                          # File handling and S3 storage
-│   └── utils/
-│       ├── ai.py                              # AI client configuration
-│       └── logger.py                          # Logging utilities
-├── docker/                                    # Docker configuration files
-├── docker-compose.yml
-└── requirements.txt
+│   ├── integrations/          # External service integrations
+│   ├── models/               # Database models
+│   ├── repositories/         # Data access layer
+│   ├── routes/              # API endpoints
+│   ├── schemas/             # Pydantic schemas
+│   ├── services/            # Business logic
+│   ├── config/              # Application configuration
+│   └── utils/               # Utility functions
+├── config/                  # Project configuration
+│   ├── db.py               # Database configuration
+│   └── settings.py         # Application settings
+├── utils/                   # Project utilities
+├── main.py                 # Application entry point
+├── Dockerfile              # Docker configuration
+├── docker-compose.yaml     # Docker services orchestration
+├── nginx.conf              # Nginx configuration
+├── production.yaml         # Production deployment config
+├── pyproject.toml          # Python project configuration
+└── uv.lock                 # Dependency lock file
 ```
 
 ## 🐳 Docker Compose Services
@@ -86,8 +93,8 @@ buddy/
 The application runs using the following containers:
 
 - **app**: Main Python application
-- **db**: PostgreSQL database
-- **redis**: Cache and message broker (if applicable)
+- **nginx**: Web server and reverse proxy
+- **db**: SQLite database (development) / PostgreSQL (production)
 
 ```yaml
 # Example docker-compose.yml structure
@@ -95,24 +102,19 @@ version: '3.8'
 services:
   app:
     build: .
-    ports:
-      - "8000:8000"
-    depends_on:
-      - db
+    volumes:
+      - .:/app
     env_file:
       - .env
 
-  db:
-    image: postgres:14-alpine
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "8000:80"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-    environment:
-      - POSTGRES_DB=${POSTGRES_DB}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-
-volumes:
-  postgres_data:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - app
 ```
 
 ## 🔧 Configuration
@@ -124,7 +126,36 @@ volumes:
 | `AWS_ACCESS_KEY_ID` | AWS access key for S3 storage |
 | `AWS_SECRET_ACCESS_KEY` | AWS secret key for S3 storage |
 | `OPENAI_API_KEY` | OpenAI API key for transcription |
-| `POSTGRES_*` | Database configuration variables |
+| `DATABASE_URL` | Database connection URL |
+
+### Development Setup
+
+1. Create a virtual environment:
+```bash
+python -m venv .venv
+source .venv/bin/activate  # On Unix/macOS
+# or
+.venv\Scripts\activate  # On Windows
+```
+
+2. Install dependencies:
+```bash
+pip install uv
+uv sync
+```
+
+3. Run the application:
+```bash
+uv run main.py
+```
+
+### Production Deployment
+
+For production deployment, use the provided Docker configuration:
+
+```bash
+docker-compose -f production.yaml up -d
+```
 
 ## 📝 API Documentation
 

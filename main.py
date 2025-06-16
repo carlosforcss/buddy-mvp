@@ -2,11 +2,9 @@ from fastapi import FastAPI
 from tortoise import Tortoise, run_async
 from tortoise.contrib.fastapi import register_tortoise
 from fastapi.middleware.cors import CORSMiddleware
-from src.files.routes import router as file_router
-from src.voice.routes import router as audio_router
-from src.conversations.routes import router as conversations_router
-from config.db import initialize_db
-
+from src.routes.files import router as file_router
+from src.routes.voice import router as audio_router
+from src.routes.conversations import router as conversations_router
 
 def get_app(*args):
     app = FastAPI(
@@ -32,8 +30,7 @@ def get_app(*args):
         db_url="sqlite://db.sqlite3",
         modules={
             "models": [
-                "src.files.models",
-                "src.conversations.models",
+                "src.models",
             ]
         },
         generate_schemas=True,
