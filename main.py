@@ -1,15 +1,12 @@
 from fastapi import FastAPI
 import sentry_sdk
 from sentry_sdk.integrations.fastapi import FastApiIntegration
-from tortoise import Tortoise, run_async
 from tortoise.contrib.fastapi import register_tortoise
 from fastapi.middleware.cors import CORSMiddleware
 from src.routes.files import router as file_router
 from src.routes.voice import router as audio_router
 from src.routes.conversations import router as conversations_router
 from config.settings import SENTRY_DSN
-from fastapi.responses import JSONResponse
-from tortoise.exceptions import DBConnectionError
 
 
 def get_app(*args):

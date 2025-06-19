@@ -3,6 +3,7 @@ from utils.logger import Logger
 from config import settings
 from src.services.session_service import SessionService
 from src.services.conversations_service import ConversationsService
+from src.services.image_transcription_service import ImageTranscriptionService
 from src.integrations.realtime import RealtimeSessionService
 from src.repositories import SessionRepository
 from src.schemas.image_transcription import ImageTranscriptionSchema

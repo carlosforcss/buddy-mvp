@@ -78,7 +78,7 @@ class AudioTranscriptionService:
         3. Save the audio to S3
         4. Store the transcription in the database
         """
-        self.logger.info("Processing audio file")
+        logger.info("Processing audio file")
 
         # Convert bytes to BytesIO
         mp3_content = await self.transform_pcm_to_mp3(audio_content)
@@ -87,15 +87,15 @@ class AudioTranscriptionService:
         # audio_text_transcription = self.client.audio_to_text(audio_content)
         # Dummy audio transcription
         audio_text_transcription = "This is a dummy transcription"
-        self.logger.info(
+        logger.info(
             f"Generated audio transcription: {audio_text_transcription[:100]}..."
         )
 
         # Save audio to S3
         file_name = f"{uuid.uuid4()}.mp3"  # Using .wav as default format
         # audio_content.seek(0)  # Reset buffer position for upload
-        self.logger.info(f"Uploading file to S3: {file_name}")
-        self.logger.info(f"File size: {len(mp3_content)}")
+        logger.info(f"Uploading file to S3: {file_name}")
+        logger.info(f"File size: {len(mp3_content)}")
         file = await self.files_service.upload_file(mp3_content, "mp3", file_name)
 
         # Store transcription in database
