@@ -4,23 +4,41 @@ Buddy is an innovative accessibility tool designed to assist people with low vis
 
 ## 🌟 Features
 
-- **Audio Processing**: Real-time conversion between different audio formats (PCM/MP3)
+- **Real-time Audio Communication**: WebSocket-based real-time audio processing via OpenAI's Realtime API
+- **Multi-modal Support**: Audio transcription, image description, and conversational AI
+- **Visual Context Processing**: Automatic image analysis and description using Google Gemini
 - **Speech-to-Text Transcription**: Accurate audio transcription powered by OpenAI
-- **Cloud Storage Integration**: Secure audio file storage using S3
-- **Database Management**: Efficient storage and retrieval of transcriptions
+- **Spanish-First Accessibility**: Designed specifically for Spanish-speaking users with visual impairments
+- **Cloud Storage Integration**: Secure file storage using AWS S3
+- **Session Management**: Persistent conversation sessions with context retention
+- **Audio Format Conversion**: Real-time conversion between different audio formats (PCM/MP3)
 
 ## 🛠 Technology Stack
 
-### Backend Services
+### Backend Framework
+- **FastAPI**: Modern, fast web framework for building APIs
 - **Python**: Core programming language
-- **FFmpeg**: Audio processing and format conversion
-- **OpenAI**: AI-powered audio transcription
-- **AWS S3**: Cloud storage for audio files
+- **Tortoise ORM**: Async Python ORM for database operations
+- **WebSocket**: Real-time bidirectional communication
 
-### Infrastructure
+### AI & Machine Learning
+- **OpenAI Realtime API**: Real-time conversational AI
+- **OpenAI API**: Audio transcription and text processing
+- **Google Gemini**: Advanced image analysis and description
+- **Google Cloud Speech-to-Text**: Speech recognition
+- **Google Cloud Text-to-Speech**: Voice synthesis
+
+### Storage & Infrastructure
+- **AWS S3**: Cloud storage for files and media
+- **SQLite**: Development database
 - **Docker**: Containerization
 - **Docker Compose**: Multi-container orchestration
-- **PostgreSQL**: Database management
+- **Nginx**: Web server and reverse proxy
+
+### Monitoring & DevOps
+- **Sentry**: Error monitoring and performance tracking
+- **FFmpeg**: Audio processing and format conversion
+- **UV**: Fast Python package manager
 
 ## 📋 Prerequisites
 
