@@ -10,11 +10,12 @@ from starlette.websockets import WebSocketState
 import asyncio
 from utils.constants import OPENAI_REALTIME_INSTRUCTIONS
 from utils.logger import Logger
-from src.repositories import ImageTranscriptionRepository
+from src.repositories import ImageTranscriptionRepository, RealtimeEventRepository
 from src.services.images_service import ImageTranscriptionService
 from src.services.audio_transcription_service import AudioTranscriptionService
 from src.repositories import SessionRepository
 from src.services.session_service import SessionService
+from src.models import EventDirection
 
 
 logger = Logger(__name__)
@@ -156,6 +157,7 @@ class RealtimeSessionService:
         )
         self.image_transcription_repository = ImageTranscriptionRepository()
         self.image_transcription_service = ImageTranscriptionService()
+        self.realtime_event_repository = RealtimeEventRepository()
 
     def get_tools(self):
         return [
@@ -191,6 +193,18 @@ class RealtimeSessionService:
     def _get_connection_url(self):
         return f"{settings.OPENAI_REALTIME_URL}?model={settings.OPENAI_REALTIME_MODEL}"
 
+    async def _log_event(self, session_id: int, event_type: str, event_body: dict, direction: EventDirection):
+        """Log a realtime event to the database"""
+        try:
+            await self.realtime_event_repository.create(
+                session_id=session_id,
+                event_type=event_type,
+                event_body=event_body,
+                direction=direction
+            )
+        except Exception as e:
+            logger.error(f"Failed to log realtime event: {e}")
+
     async def _handle_connection_close(self, session):
         logger.info(f"Connection closed for session {session.id}")
         await self.session_repository.close_session(session)
@@ -218,6 +232,7 @@ class RealtimeSessionService:
                     audio_base64
                 )
                 await external_websocket.send(json.dumps(new_message))
+                await self._log_event(session.id, new_message.get("type"), new_message, EventDirection.SENT)
                 logger.info("commit event sent")
             except websockets.ConnectionClosed:
                 await self._handle_connection_close(session)
@@ -236,6 +251,7 @@ class RealtimeSessionService:
             try:
                 data = await external_websocket.recv()
                 event = json.loads(data)
+                await self._log_event(session.id, event.get("type"), event, EventDirection.RECEIVED)
                 if not event.get("type") == "response.audio.delta":
                     await internal_websocket.send_text(
                         json.dumps({"log": f"{event}"}, indent=4)
@@ -249,6 +265,7 @@ class RealtimeSessionService:
                         transcription_message = self.session_events_service.get_conversation_text_item_create_event(last_image_transcription.transcription, "system")
                         logger.info(f"Sending transcription event message.")
                         await external_websocket.send(json.dumps(transcription_message))
+                        await self._log_event(session.id, transcription_message.get("type"), transcription_message, EventDirection.SENT)
                     else:
                         response_create_event = (
                             self.session_events_service.get_response_create_event(
@@ -256,6 +273,7 @@ class RealtimeSessionService:
                             )
                         )
                         await external_websocket.send(json.dumps(response_create_event))
+                        await self._log_event(session.id, response_create_event.get("type"), response_create_event, EventDirection.SENT)
                 if (
                     event.get("type") == "conversation.item.created"
                     and event.get("item").get("role") == "system"
@@ -267,6 +285,7 @@ class RealtimeSessionService:
                         )
                     )
                     await external_websocket.send(json.dumps(response_create_event))
+                    await self._log_event(session.id, response_create_event.get("type"), response_create_event, EventDirection.SENT)
                 if event.get("type") == "response.audio.delta":
                     logger.info(f"{session.id} - Receiving audio delta chunk")
                     audio_data = base64.b64decode(event.get("delta"))
@@ -291,13 +310,11 @@ class RealtimeSessionService:
             logger.info(f"connected to external ws for session {session_id}")
             self.external_ws = external_ws
             self.internal_ws = internal_websocket
-            await external_ws.send(
-                json.dumps(
-                    self.session_events_service.get_first_session_update_event(
-                        self.modalities
-                    )
-                )
+            session_update_event = self.session_events_service.get_first_session_update_event(
+                self.modalities
             )
+            await external_ws.send(json.dumps(session_update_event))
+            await self._log_event(session.id, session_update_event.get("type"), session_update_event, EventDirection.SENT)
             await asyncio.gather(
                 self._openai_websocket_listener(
                     internal_websocket, external_ws, session
