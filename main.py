@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.routes.files import router as file_router
 from src.routes.voice import router as audio_router
 from src.routes.conversations import router as conversations_router
-from config.settings import SENTRY_DSN
+from config.settings import SENTRY_DSN, DATABASE_URL
 
 
 def get_app(*args):
@@ -46,7 +46,7 @@ def get_app(*args):
 
     register_tortoise(
         app,
-        db_url="sqlite://db.sqlite3",
+        db_url=DATABASE_URL,
         modules={
             "models": [
                 "src.models",

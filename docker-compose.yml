@@ -38,4 +38,4 @@ services:
     command: uv run main.py
 
 volumes:
-  postgres_data: 
+  postgres_data:
