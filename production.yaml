@@ -49,7 +49,6 @@ services:
       db:
         condition: service_healthy
     restart: unless-stopped
-    command: uv run uvicorn main:get_app --host 0.0.0.0 --port 8000 --factory
 
 volumes:
   postgres_data_prod:
