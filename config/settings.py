@@ -13,7 +13,7 @@ OPENAI_REALTIME_URL = os.getenv("OPENAI_REALTIME_URL")
 OPENAI_REALTIME_API_KEY = os.getenv("OPENAI_REALTIME_API_KEY")
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 SENTRY_DSN = os.getenv("SENTRY_DSN")
-
+c
 # Database Configuration
 DATABASE_HOST = os.getenv("DATABASE_HOST", "db")
 DATABASE_PORT = os.getenv("DATABASE_PORT", "5432")
