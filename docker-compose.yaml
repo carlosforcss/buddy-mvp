@@ -30,6 +30,8 @@ services:
       - DATABASE_NAME=buddy
       - DATABASE_USER=buddy
       - DATABASE_PASSWORD=buddy
+    env_file:
+      - .env
     depends_on:
       db:
         condition: service_healthy

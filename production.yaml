@@ -26,6 +26,8 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: buddy_app_prod
+    env_file:
+      - .env
     ports:
       - "${APP_PORT:-8000}:8000"
     environment:
