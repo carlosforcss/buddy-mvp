@@ -29,7 +29,7 @@ services:
     ports:
       - "${APP_PORT:-8000}:8000"
     environment:
-      - DATABASE_URL=${DATABASE_URL:-postgres://buddy:buddy@db:5432/buddy}
+      - DATABASE_URL=${DATABASE_URL}
       - DATABASE_HOST=db
       - DATABASE_PORT=${DATABASE_PORT:-5432}
       - DATABASE_NAME=${DATABASE_NAME:-buddy}
